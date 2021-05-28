@@ -90,14 +90,14 @@ void CommandBufferQueue::flush() noexcept {
     mFreeSpace -= used;
     const size_t requiredSize = mRequiredSize;
 
-#ifndef NDEBUG
+//#ifndef NDEBUG
     size_t totalUsed = circularBuffer.size() - mFreeSpace;
-    mHighWatermark = std::max(mHighWatermark, totalUsed);
+//    mHighWatermark = std::max(mHighWatermark, totalUsed);
     if (UTILS_UNLIKELY(totalUsed > requiredSize)) {
         slog.d << "CommandStream used too much space: " << totalUsed
             << ", out of " << requiredSize << " (will block)" << io::endl;
     }
-#endif
+//#endif
 
     if (UTILS_LIKELY(mFreeSpace >= requiredSize)) {
         // ideally (and usually) we don't have to wait, this is the common case, so special case
