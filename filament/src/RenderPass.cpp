@@ -113,13 +113,14 @@ RenderPass::Command* RenderPass::appendCommands(CommandTypeFlags const commandTy
     auto work = [commandTypeFlags, curr, &soa, renderFlags, visibilityMask, cameraPosition,
                  cameraForwardVector]
             (uint32_t startIndex, uint32_t indexCount) {
+        SYSTRACE_NAME("generateCommands");
         RenderPass::generateCommands(commandTypeFlags, curr,
                 soa, { startIndex, startIndex + indexCount }, renderFlags, visibilityMask,
                 cameraPosition, cameraForwardVector);
     };
 
     auto *jobCommandsParallel = jobs::parallel_for(js, nullptr, vr.first, (uint32_t)vr.size(),
-            std::cref(work), jobs::CountSplitter<JOBS_PARALLEL_FOR_COMMANDS_COUNT, 8>());
+            std::cref(work), jobs::CountSplitter<JOBS_PARALLEL_FOR_COMMANDS_COUNT, 4>());
 
     { // scope for systrace
         SYSTRACE_NAME("jobCommandsParallel");

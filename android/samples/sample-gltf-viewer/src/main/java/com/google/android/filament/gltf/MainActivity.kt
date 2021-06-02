@@ -86,9 +86,9 @@ class MainActivity : Activity() {
         setStatusText("To load a new model, go to the above URL on your host machine.")
 
         val view = modelViewer.view
-        view.dynamicResolutionOptions = view.dynamicResolutionOptions.apply {
-            enabled = true
-        }
+//        view.dynamicResolutionOptions = view.dynamicResolutionOptions.apply {
+//            enabled = true
+//        }
 
         view.ambientOcclusionOptions = view.ambientOcclusionOptions.apply {
             enabled = true
