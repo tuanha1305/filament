@@ -449,12 +449,6 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     pass.appendCommands(RenderPass::COLOR);
     pass.sortCommands();
 
-    FrameGraphTexture::Descriptor desc = {
-            .width = config.svp.width,
-            .height = config.svp.height,
-            .format = config.hdrFormat
-    };
-
     // a non-drawing pass to prepare everything that need to be before the color passes execute
     fg.addTrivialSideEffectPass("Prepare Color Passes",
             [=, &js, &view, &ppm](DriverApi& driver) {
@@ -490,7 +484,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
 
     // the color pass itself + color-grading as subpass if needed
     FrameGraphId<FrameGraphTexture> colorPassOutput = colorPass(fg, "Color Pass",
-            desc, config, colorGradingConfigForColor, pass.getExecutor(), view);
+            { }, config, colorGradingConfigForColor, pass.getExecutor(), view);
 
     // the color pass + refraction + color-grading as subpass if needed
     // this cancels the colorPass() call above if refraction is active.
@@ -539,9 +533,9 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
 
         if (hasColorGrading) {
             if (!colorGradingConfig.asSubpass) {
-                input = ppm.colorGrading(fg, input,
+                input = ppm.colorGrading(fg, input, svp.width, svp.height,
                         colorGrading, colorGradingConfig,
-                        bloomOptions, vignetteOptions, scale);
+                        bloomOptions, vignetteOptions);
             }
         }
         if (hasFXAA) {
@@ -551,13 +545,14 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
         if (scaled) {
             mightNeedFinalBlit = false;
             if (UTILS_LIKELY(!blending && dsrOptions.quality == QualityLevel::LOW)) {
-                input = ppm.opaqueBlit(fg, input, {
+                input = ppm.opaqueBlit(fg, input, svp.width, svp.height, {
                         .width = vp.width, .height = vp.height,
                         .format = colorGradingConfig.ldrFormat }, SamplerMagFilter::LINEAR);
             } else {
-                input = ppm.blendBlit(fg, blending, dsrOptions, input, {
-                        .width = vp.width, .height = vp.height,
-                        .format = colorGradingConfig.ldrFormat });
+                input = ppm.blendBlit(fg, blending, dsrOptions,
+                        input, svp.width, svp.height, {
+                                .width = vp.width, .height = vp.height,
+                                .format = colorGradingConfig.ldrFormat });
             }
         }
     }
@@ -578,13 +573,14 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
             ((outputIsSwapChain && (msaaSampleCount > 1 || colorGradingConfig.asSubpass)) ||
              blending)) {
         if (UTILS_LIKELY(!blending && dsrOptions.quality == QualityLevel::LOW)) {
-            input = ppm.opaqueBlit(fg, input, {
+            input = ppm.opaqueBlit(fg, input, svp.width, svp.height, {
                     .width = vp.width, .height = vp.height,
                     .format = colorGradingConfig.ldrFormat }, SamplerMagFilter::LINEAR);
         } else {
-            input = ppm.blendBlit(fg, blending, dsrOptions, input, {
-                    .width = vp.width, .height = vp.height,
-                    .format = colorGradingConfig.ldrFormat });
+            input = ppm.blendBlit(fg, blending, dsrOptions,
+                    input, svp.width, svp.height, {
+                            .width = vp.width, .height = vp.height,
+                            .format = colorGradingConfig.ldrFormat });
         }
     }
 
@@ -636,21 +632,14 @@ FrameGraphId<FrameGraphTexture> FRenderer::refractionPass(FrameGraph& fg,
 
         const RenderPass::Executor opaquePass{ pass.getExecutor(pass.begin(), refraction) };
 
-        FrameGraphTexture::Descriptor desc = {
-                .width = config.svp.width,
-                .height = config.svp.height,
-                .samples = config.msaa,  // we need to conserve the sample buffer
-                .format = config.hdrFormat
-        };
-
-        input = colorPass(fg, "Color Pass (opaque)", desc, config,
-                { .asSubpass = false }, opaquePass, view);
+        input = colorPass(fg, "Color Pass (opaque)", { .samples = config.msaa },
+                config,{ .asSubpass = false }, opaquePass, view);
 
         // vvv the actual refraction pass starts below vvv
 
         // scale factor for the gaussian so it matches our resolution / FOV
         const float verticalFieldOfView = view.getCameraUser().getFieldOfView(Camera::Fov::VERTICAL);
-        const float s = verticalFieldOfView / desc.height;
+        const float s = verticalFieldOfView / config.svp.height;
 
         // The kernel-size was determined empirically so that we don't get too many artifacts
         // due to the down-sampling with a box filter (which happens implicitly).
@@ -677,7 +666,7 @@ FrameGraphId<FrameGraphTexture> FRenderer::refractionPass(FrameGraph& fg,
         // TODO: If we want to limit the number of mip levels, we must reduce the initial
         //       resolution (if we want to keep the same filter, and still match the IBL somewhat).
         const uint8_t roughnessLodCount =
-                std::min(maxLod, FTexture::maxLevelCount(desc.width, desc.height));
+                std::min(maxLod, FTexture::maxLevelCount(config.svp.width, config.svp.height));
 
         // First we need to resolve the MSAA buffer if enabled
         input = ppm.resolve(fg, "Resolved Color Buffer", input);
@@ -693,7 +682,7 @@ FrameGraphId<FrameGraphTexture> FRenderer::refractionPass(FrameGraph& fg,
             h = config.vp.height * config.scale.x;
         }
 
-        input = ppm.opaqueBlit(fg, input, {
+        input = ppm.opaqueBlit(fg, input, config.svp.width, config.svp.height, {
                 .width = w,
                 .height = h,
                 .levels = roughnessLodCount,
@@ -711,7 +700,7 @@ FrameGraphId<FrameGraphTexture> FRenderer::refractionPass(FrameGraph& fg,
         config.refractionLodOffset = refractionLodOffset;
         config.clearFlags = TargetBufferFlags::NONE;
         output = colorPass(fg, "Color Pass (transparent)",
-                desc, config, colorGradingConfig, translucentPass, view);
+                { .samples = config.msaa }, config, colorGradingConfig, translucentPass, view);
 
         if (config.msaa > 1 && !colorGradingConfig.asSubpass) {
             // We need to do a resolve here because later passes (such as color grading or DoF) will need
@@ -727,9 +716,13 @@ FrameGraphId<FrameGraphTexture> FRenderer::refractionPass(FrameGraph& fg,
 }
 
 FrameGraphId<FrameGraphTexture> FRenderer::colorPass(FrameGraph& fg, const char* name,
-        FrameGraphTexture::Descriptor const& colorBufferDesc,
+        FrameGraphTexture::Descriptor colorBufferDesc,
         ColorPassConfig const& config, PostProcessManager::ColorGradingConfig colorGradingConfig,
         RenderPass::Executor const& passExecutor, FView const& view) const noexcept {
+
+    colorBufferDesc.width = config.vp.width;
+    colorBufferDesc.height = config.vp.height;
+    colorBufferDesc.format = config.hdrFormat;
 
     struct ColorPassData {
         FrameGraphId<FrameGraphTexture> shadows;
@@ -820,6 +813,7 @@ FrameGraphId<FrameGraphTexture> FRenderer::colorPass(FrameGraph& fg, const char*
 
                 builder.declareRenderPass("Color Pass Target", {
                         .attachments = { .color = { data.color, data.output }, .depth = data.depth },
+                        .viewport = {0, 0, config.svp.width, config.svp.height },
                         .samples = config.msaa,
                         .clearFlags = clearColorFlags | clearDepthFlags });
 

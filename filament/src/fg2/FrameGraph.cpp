@@ -57,6 +57,17 @@ FrameGraphId<FrameGraphTexture> FrameGraph::Builder::declareRenderPass(
     return color;
 }
 
+FrameGraphId<FrameGraphTexture> FrameGraph::Builder::declareRenderPass(
+        FrameGraphId<FrameGraphTexture> color, filament::Viewport viewport, uint32_t* index) {
+    color = write(color);
+    uint32_t id = declareRenderPass(getName(color), {
+            .attachments = { .color = { color }},
+            .viewport = viewport
+    });
+    if (index) *index = id;
+    return color;
+}
+
 // ------------------------------------------------------------------------------------------------
 
 FrameGraph::FrameGraph(ResourceAllocatorInterface& resourceAllocator)

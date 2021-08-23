@@ -89,10 +89,9 @@ public:
 
     // Color grading, tone mapping, dithering and bloom
     FrameGraphId<FrameGraphTexture> colorGrading(FrameGraph& fg,
-            FrameGraphId<FrameGraphTexture> input,
+            FrameGraphId<FrameGraphTexture> input, uint32_t contentWidth, uint32_t contentHeight,
             const FColorGrading* colorGrading, ColorGradingConfig const& colorGradingConfig,
-            BloomOptions const& bloomOptions, VignetteOptions const& vignetteOptions,
-            math::float2 scale) noexcept;
+            BloomOptions const& bloomOptions, VignetteOptions const& vignetteOptions) noexcept;
 
     void colorGradingPrepareSubpass(backend::DriverApi& driver, const FColorGrading* colorGrading,
             ColorGradingConfig const& colorGradingConfig,
@@ -118,12 +117,13 @@ public:
 
     // Blit/rescaling/resolves
     FrameGraphId<FrameGraphTexture> opaqueBlit(FrameGraph& fg,
-            FrameGraphId<FrameGraphTexture> input, FrameGraphTexture::Descriptor const& outDesc,
+            FrameGraphId<FrameGraphTexture> input, uint32_t contentWidth, uint32_t contentHeight,
+            FrameGraphTexture::Descriptor const& outDesc,
             backend::SamplerMagFilter filter = backend::SamplerMagFilter::LINEAR) noexcept;
 
     FrameGraphId<FrameGraphTexture> blendBlit(
             FrameGraph& fg, bool translucent, DynamicResolutionOptions dsrOptions,
-            FrameGraphId<FrameGraphTexture> input,
+            FrameGraphId<FrameGraphTexture> input, uint32_t contentWidth, uint32_t contentHeight,
             FrameGraphTexture::Descriptor const& outDesc) noexcept;
 
     FrameGraphId<FrameGraphTexture> resolve(FrameGraph& fg,

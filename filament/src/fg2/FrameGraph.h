@@ -88,6 +88,10 @@ public:
         FrameGraphId<FrameGraphTexture> declareRenderPass(
                 FrameGraphId<FrameGraphTexture> color, uint32_t* index = nullptr);
 
+        FrameGraphId<FrameGraphTexture> declareRenderPass(
+                FrameGraphId<FrameGraphTexture> color, filament::Viewport viewport,
+                uint32_t* index = nullptr);
+
         /**
          * Creates a virtual resource of type RESOURCE
          * @tparam RESOURCE Type of the resource to create

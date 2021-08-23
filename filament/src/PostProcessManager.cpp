@@ -1457,7 +1457,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::bloomPass(FrameGraph& fg,
     // decreases, meaning that the user might need to adjust the BloomOptions::resolution and
     // BloomOptions::levels.
     if (inoutBloomOptions.anamorphism >= 1.0f) {
-        bloomWidth *= 1.0 / inoutBloomOptions.anamorphism;
+        bloomWidth *= 1.0f / inoutBloomOptions.anamorphism;
     } else {
         bloomHeight *= inoutBloomOptions.anamorphism;
     }
@@ -1475,7 +1475,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::bloomPass(FrameGraph& fg,
     if (2 * width < desc.width || 2 * height < desc.height) {
         // if we're scaling down by more than 2x, prescale the image with a blit to improve
         // performance. This is important on mobile/tilers.
-        input = opaqueBlit(fg, input, {
+        input = opaqueBlit(fg, input, desc.width, desc.height, {
                 .width = desc.width / 2,
                 .height = desc.height / 2,
                 .format = outFormat
@@ -1895,10 +1895,9 @@ void PostProcessManager::colorGradingSubpass(DriverApi& driver,
 }
 
 FrameGraphId<FrameGraphTexture> PostProcessManager::colorGrading(FrameGraph& fg,
-        FrameGraphId<FrameGraphTexture> input,
+        FrameGraphId<FrameGraphTexture> input, uint32_t contentWidth, uint32_t contentHeight,
         FColorGrading const* colorGrading, ColorGradingConfig const& colorGradingConfig,
-        BloomOptions const& bloomOptions, VignetteOptions const& vignetteOptions,
-        float2 scale) noexcept
+        BloomOptions const& bloomOptions, VignetteOptions const& vignetteOptions) noexcept
 {
     Blackboard& blackboard = fg.getBlackboard();
 
@@ -1946,7 +1945,8 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::colorGrading(FrameGraph& fg,
                         .height = inputDesc.height,
                         .format = colorGradingConfig.ldrFormat
                 });
-                data.output = builder.declareRenderPass(data.output);
+                data.output = builder.declareRenderPass(data.output,
+                        { 0, 0, contentWidth, contentHeight });
 
                 if (bloom) {
                     data.bloom = builder.sample(bloom);
@@ -2228,7 +2228,8 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::taa(FrameGraph& fg,
 }
 
 FrameGraphId<FrameGraphTexture> PostProcessManager::opaqueBlit(FrameGraph& fg,
-        FrameGraphId<FrameGraphTexture> input, FrameGraphTexture::Descriptor const& outDesc,
+        FrameGraphId<FrameGraphTexture> input, uint32_t contentWidth, uint32_t contentHeight,
+        FrameGraphTexture::Descriptor const& outDesc,
         SamplerMagFilter filter) noexcept {
 
     struct PostProcessScaling {
@@ -2254,7 +2255,9 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::opaqueBlit(FrameGraph& fg,
                 // HwTexture handle. Using a RenderPass works because data.input will resolve
                 // to the actual imported render target and will have the correct viewport.
                 builder.declareRenderPass("opaque blit input", {
-                        .attachments = { .color = { data.input }}});
+                        .attachments = { .color = { data.input }},
+                        .viewport = { 0, 0, contentWidth, contentHeight }
+                });
             },
             [=](FrameGraphResources const& resources, auto const& data, DriverApi& driver) {
                 auto out = resources.getRenderPassInfo(0);
@@ -2271,7 +2274,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::opaqueBlit(FrameGraph& fg,
 
 FrameGraphId<FrameGraphTexture> PostProcessManager::blendBlit(
         FrameGraph& fg, bool translucent, DynamicResolutionOptions dsrOptions,
-        FrameGraphId<FrameGraphTexture> input,
+        FrameGraphId<FrameGraphTexture> input, uint32_t contentWidth, uint32_t contentHeight,
         FrameGraphTexture::Descriptor const& outDesc) noexcept {
 
     Handle<HwRenderPrimitive> fullScreenRenderPrimitive = mEngine.getFullScreenRenderPrimitive();
@@ -2308,6 +2311,8 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::blendBlit(
                 if (dsrOptions.quality == QualityLevel::ULTRA) {
                     FSRUniforms uniforms;
                     FSR_ScalingSetup(&uniforms, {
+                            .viewportWidth = contentWidth,
+                            .viewportHeight = contentHeight,
                             .inputWidth = inputDesc.width,
                             .inputHeight = inputDesc.height,
                             .outputWidth = outputDesc.width,

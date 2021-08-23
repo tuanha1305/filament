@@ -152,7 +152,7 @@ private:
     };
 
     FrameGraphId<FrameGraphTexture> colorPass(FrameGraph& fg, const char* name,
-            FrameGraphTexture::Descriptor const& colorBufferDesc,
+            FrameGraphTexture::Descriptor colorBufferDesc,
             ColorPassConfig const& config,
             PostProcessManager::ColorGradingConfig colorGradingConfig,
             RenderPass::Executor const& passExecutor, FView const& view) const noexcept;
