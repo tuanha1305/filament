@@ -12,6 +12,11 @@ material {
             precision: high
         },
         {
+            type : float4,
+            name : uvparams,
+            precision: high
+        },
+        {
             type : uint4,
             name : EasuCon0,
             precision: high

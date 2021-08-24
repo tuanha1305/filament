@@ -227,8 +227,8 @@ static const MaterialInfo sMaterialList[] = {
         { "separableGaussianBlur",      MATERIAL(SEPARABLEGAUSSIANBLUR) },
         { "taa",                        MATERIAL(TAA) },
         { "vsmMipmap",                  MATERIAL(VSMMIPMAP) },
-        { "fsr_easu",                  MATERIAL(FSR_EASU) },
-        { "fsr_rcas",                  MATERIAL(FSR_RCAS) },
+        { "fsr_easu",                   MATERIAL(FSR_EASU) },
+        { "fsr_rcas",                   MATERIAL(FSR_RCAS) },
 };
 
 void PostProcessManager::init() noexcept {
@@ -2328,9 +2328,14 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::blendBlit(
                     .filterMag = SamplerMagFilter::LINEAR,
                     .filterMin = SamplerMinFilter::LINEAR
                 });
-                mi->setParameter("resolution",
-                        float4{ outputDesc.width, outputDesc.height,
-                                1.0f / outputDesc.width, 1.0f / outputDesc.height });
+                mi->setParameter("resolution", float4{
+                        outputDesc.width, outputDesc.height,
+                        1.0f / outputDesc.width, 1.0f / outputDesc.height });
+                mi->setParameter("uvparams", float4{
+                        float(contentWidth), float(contentHeight),
+                        1.0f / float(inputDesc.width), 1.0f / float(inputDesc.height)
+                });
+
                 mi->commit(driver);
                 mi->use(driver);
 
