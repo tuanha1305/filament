@@ -117,11 +117,10 @@ struct PerViewUib { // NOLINT(cppcoreguidelines-pro-type-member-init)
 
     float aoSamplingQualityAndEdgeDistance;     // 0: bilinear, !0: bilateral edge distance
     float aoBentNormals;                        // 0: no AO bent normal, >0.0 AO bent normals
-    float aoReserved2;
-    float aoReserved3;
+    math::float2 uvscaleAo;
 
     math::float2 clipControl;
-    math::float2 padding1;
+    math::float2 uvscaleStructure;
 
     float vsmExponent;
     float vsmDepthScale;

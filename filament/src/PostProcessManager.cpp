@@ -309,9 +309,21 @@ void PostProcessManager::commitAndRender(FrameGraphResources::RenderPassInfo con
 
 // ------------------------------------------------------------------------------------------------
 
-FrameGraphId<FrameGraphTexture> PostProcessManager::structure(FrameGraph& fg,
-        RenderPass const& pass, uint32_t width, uint32_t height, float scale) noexcept {
+FrameGraphId<FrameGraphTexture> PostProcessManager::structure(FrameGraph& fg, RenderPass const& pass,
+        FrameGraphTexture::Descriptor structureDesc,
+        uint32_t contentWidth, uint32_t contentHeight, float scale) noexcept {
 
+    assert_invariant(scale == 1.0f || scale == 0.5f);
+    assert_invariant(structureDesc.width >= contentWidth);
+    assert_invariant(structureDesc.height >= contentHeight);
+
+    // scale the texture size by 1/2 if requested by the user. This doesn't change every frame.
+    structureDesc.width  = (uint32_t)std::ceil(float(structureDesc.width ) * scale);
+    structureDesc.height = (uint32_t)std::ceil(float(structureDesc.height) * scale);
+
+    // content width needs to be scaled too, we always use 32 pixels minimum
+    contentWidth  = std::max((uint32_t)std::ceil(float(contentWidth ) * scale), 32u);
+    contentHeight = std::max((uint32_t)std::ceil(float(contentHeight) * scale), 32u);
 
     // structure pass -- automatically culled if not used, currently used by:
     //    - ssao
@@ -321,26 +333,19 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::structure(FrameGraph& fg,
         FrameGraphId<FrameGraphTexture> depth;
     };
 
-    // sanitize a bit the user provided scaling factor
-    width  = std::max(32u, (uint32_t)std::ceil(width * scale));
-    height = std::max(32u, (uint32_t)std::ceil(height * scale));
-
     // We limit the lowest lod size to 32 pixels (which is where the -5 comes from)
-    const size_t levelCount = std::min(8, FTexture::maxLevelCount(width, height) - 5);
+    const size_t levelCount = std::min(8, FTexture::maxLevelCount(contentWidth, contentHeight) - 5);
     assert_invariant(levelCount >= 1);
+    structureDesc.levels = uint8_t(levelCount);
 
     // generate depth pass at the requested resolution
     auto& structurePass = fg.addPass<StructurePassData>("Structure Pass",
             [&](FrameGraph::Builder& builder, auto& data) {
-                data.depth = builder.createTexture("Structure Buffer", {
-                        .width = width, .height = height,
-                        .levels = uint8_t(levelCount),
-                        .format = TextureFormat::DEPTH32F });
-
+                data.depth = builder.createTexture("Structure Buffer", structureDesc);
                 data.depth = builder.write(data.depth, FrameGraphTexture::Usage::DEPTH_ATTACHMENT);
-
                 builder.declareRenderPass("Structure Target", {
                         .attachments = { .depth = data.depth },
+                        .viewport = { 0, 0, contentWidth, contentHeight },
                         .clearFlags = TargetBufferFlags::DEPTH
                 });
             },
@@ -364,13 +369,18 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::structure(FrameGraph& fg,
     fg.addPass<StructureMipmapData>("StructureMipmap",
             [&](FrameGraph::Builder& builder, auto& data) {
                 data.depth = builder.sample(depth);
+                uint32_t w = contentWidth;
+                uint32_t h = contentHeight;
                 for (size_t i = 1; i < levelCount; i++) {
+                    w = std::max(w / 2u, 1u);
+                    h = std::max(h / 2u, 1u);
                     auto out = builder.createSubresource(data.depth, "Structure mip", {
                             .level = uint8_t(i)
                     });
                     out = builder.write(out, FrameGraphTexture::Usage::DEPTH_ATTACHMENT);
                     data.rt[i - 1] = builder.declareRenderPass("Structure mip target", {
-                            .attachments = { .depth = out }
+                            .attachments = { .depth = out },
+                            .viewport = { 0, 0, w, h },
                     });
                 }
             },

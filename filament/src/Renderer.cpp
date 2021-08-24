@@ -416,7 +416,11 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     structurePass.sortCommands();
 
     // TODO: the scaling should depends on all passes that need the structure pass
-    ppm.structure(fg, structurePass, svp.width, svp.height, aoOptions.resolution);
+    ppm.structure(fg, structurePass, {
+            .width = vp.width,
+            .height = vp.height,
+            .format = TextureFormat::DEPTH32F
+        }, svp.width, svp.height, aoOptions.resolution);
 
     // Apply the TAA jitter to everything after the structure pass, starting with the color pass.
     if (taaOptions.enabled) {
@@ -828,16 +832,41 @@ FrameGraphId<FrameGraphTexture> FRenderer::colorPass(FrameGraph& fg, const char*
 
                 // set samplers and uniforms
                 PostProcessManager& ppm = getEngine().getPostProcessManager();
-                view.prepareSSAO(data.ssao ?
-                        resources.getTexture(data.ssao) : ppm.getOneTextureArray());
+
+                if (data.ssao) {
+                    auto const& desc = resources.getDescriptor(data.ssao);
+                    auto ssao = resources.getTexture(data.ssao);
+                    // FIXME: fragile, must be same code than in PostProcessManager::structure()
+                    float scale = view.getAmbientOcclusionOptions().resolution;
+                    uint32_t contentWidth  = std::max((uint32_t)std::ceil(float(config.svp.width ) * scale), 32u);
+                    uint32_t contentHeight = std::max((uint32_t)std::ceil(float(config.svp.height) * scale), 32u);
+                    view.prepareSSAO(ssao, {
+                            float(contentWidth) / desc.width,
+                            float(contentHeight) / desc.height,
+                    });
+                } else {
+                    view.prepareSSAO(ppm.getOneTextureArray(), { 1.0f });
+                }
 
                 // set shadow sampler
                 view.prepareShadow(data.shadows ?
                         resources.getTexture(data.shadows) : ppm.getOneTextureArray());
 
                 // set structure sampler
-                view.prepareStructure(data.structure ?
-                        resources.getTexture(data.structure) : ppm.getOneTexture());
+                if (data.structure) {
+                    auto const& desc = resources.getDescriptor(data.structure);
+                    auto structure = resources.getTexture(data.structure);
+                    // FIXME: fragile, must be same code than in PostProcessManager::structure()
+                    float scale = view.getAmbientOcclusionOptions().resolution;
+                    uint32_t contentWidth  = std::max((uint32_t)std::ceil(float(config.svp.width ) * scale), 32u);
+                    uint32_t contentHeight = std::max((uint32_t)std::ceil(float(config.svp.height) * scale), 32u);
+                    view.prepareStructure(structure, {
+                            float(contentWidth) / desc.width,
+                            float(contentHeight) / desc.height,
+                    });
+                } else {
+                    view.prepareStructure(ppm.getOneTexture(), { 1.0f });
+                }
 
                 if (data.ssr) {
                     view.prepareSSR(resources.getTexture(data.ssr), config.refractionLodOffset);

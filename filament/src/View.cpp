@@ -563,17 +563,17 @@ void FView::prepareViewport(const filament::Viewport& viewport) const noexcept {
     mPerViewUniforms.prepareViewport(viewport);
 }
 
-void FView::prepareSSAO(Handle<HwTexture> ssao) const noexcept {
-    mPerViewUniforms.prepareSSAO(ssao, mAmbientOcclusionOptions);
+void FView::prepareSSAO(Handle<HwTexture> ssao, math::float2 uvscale) const noexcept {
+    mPerViewUniforms.prepareSSAO(ssao, mAmbientOcclusionOptions, uvscale);
 }
 
 void FView::prepareSSR(Handle<HwTexture> ssr, float refractionLodOffset) const noexcept {
     mPerViewUniforms.prepareSSR(ssr, refractionLodOffset);
 }
 
-void FView::prepareStructure(Handle<HwTexture> structure) const noexcept {
+void FView::prepareStructure(Handle<HwTexture> structure, float2 uvscale) const noexcept {
     // sampler must be NEAREST
-    mPerViewUniforms.prepareStructure(structure);
+    mPerViewUniforms.prepareStructure(structure, uvscale);
 }
 
 void FView::prepareShadow(Handle<HwTexture> texture) const noexcept {

@@ -166,9 +166,9 @@ public:
     void prepareLighting(FEngine& engine, FEngine::DriverApi& driver,
             ArenaScope& arena, Viewport const& viewport) noexcept;
 
-    void prepareSSAO(backend::Handle<backend::HwTexture> ssao) const noexcept;
+    void prepareSSAO(backend::Handle<backend::HwTexture> ssao, math::float2 uvscale) const noexcept;
     void prepareSSR(backend::Handle<backend::HwTexture> ssr, float refractionLodOffset) const noexcept;
-    void prepareStructure(backend::Handle<backend::HwTexture> structure) const noexcept;
+    void prepareStructure(backend::Handle<backend::HwTexture> structure, math::float2 uvscale) const noexcept;
     void prepareShadow(backend::Handle<backend::HwTexture> structure) const noexcept;
     void prepareShadowMap() const noexcept;
 

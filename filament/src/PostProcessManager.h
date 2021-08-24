@@ -65,7 +65,8 @@ public:
 
     // structure (depth) pass
     FrameGraphId<FrameGraphTexture> structure(FrameGraph& fg, RenderPass const& pass,
-            uint32_t width, uint32_t height, float scale) noexcept;
+            FrameGraphTexture::Descriptor structureDesc,
+            uint32_t contentWidth, uint32_t contentHeight, float scale) noexcept;
 
     // SSAO
     FrameGraphId<FrameGraphTexture> screenSpaceAmbientOcclusion(FrameGraph& fg,

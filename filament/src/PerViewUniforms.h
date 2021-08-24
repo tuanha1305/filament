@@ -57,8 +57,8 @@ public:
     void prepareTime(FEngine& engine, math::float4 const& userTime) noexcept;
     void prepareExposure(float ev100) noexcept;
     void prepareFog(const CameraInfo& camera, FogOptions const& options) noexcept;
-    void prepareStructure(TextureHandle structure) noexcept;
-    void prepareSSAO(TextureHandle ssao, AmbientOcclusionOptions const& options) noexcept;
+    void prepareStructure(TextureHandle structure, math::float2 uvscale) noexcept;
+    void prepareSSAO(TextureHandle ssao, AmbientOcclusionOptions const& options, math::float2 uvscale) noexcept;
     void prepareSSR(TextureHandle ssr, float refractionLodOffset) noexcept;
     void prepareShadowMapping(ShadowMappingUniforms const& shadowMappingUniforms,
             VsmShadowOptions const& options) noexcept;

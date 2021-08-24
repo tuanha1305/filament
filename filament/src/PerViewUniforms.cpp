@@ -133,7 +133,8 @@ void PerViewUniforms::prepareFog(const CameraInfo& camera, FogOptions const& opt
     s.fogColorFromIbl      = options.fogColorFromIbl ? 1.0f : 0.0f;
 }
 
-void PerViewUniforms::prepareSSAO(Handle<HwTexture> ssao, AmbientOcclusionOptions const& options) noexcept {
+void PerViewUniforms::prepareSSAO(Handle<HwTexture> ssao,
+        AmbientOcclusionOptions const& options, math::float2 uvscale) noexcept {
     // High quality sampling is enabled only if AO itself is enabled and upsampling quality is at
     // least set to high and of course only if upsampling is needed.
     const bool highQualitySampling = options.upsampling >= QualityLevel::HIGH
@@ -149,6 +150,7 @@ void PerViewUniforms::prepareSSAO(Handle<HwTexture> ssao, AmbientOcclusionOption
     auto& s = mPerViewUb.edit();
     s.aoSamplingQualityAndEdgeDistance = options.enabled && highQualitySampling ? edgeDistance : 0.0f;
     s.aoBentNormals = options.enabled && options.bentNormals ? 1.0f : 0.0f;
+    s.uvscaleAo = uvscale;
 }
 
 void PerViewUniforms::prepareSSR(Handle<HwTexture> ssr, float refractionLodOffset) noexcept {
@@ -160,9 +162,11 @@ void PerViewUniforms::prepareSSR(Handle<HwTexture> ssr, float refractionLodOffse
     s.refractionLodOffset = refractionLodOffset;
 }
 
-void PerViewUniforms::prepareStructure(Handle<HwTexture> structure) noexcept {
+void PerViewUniforms::prepareStructure(Handle<HwTexture> structure, float2 uvscale) noexcept {
     // sampler must be NEAREST
     mPerViewSb.setSampler(PerViewSib::STRUCTURE, structure, {});
+    auto& s = mPerViewUb.edit();
+    s.uvscaleStructure = uvscale;
 }
 
 void PerViewUniforms::prepareDirectionalLight(

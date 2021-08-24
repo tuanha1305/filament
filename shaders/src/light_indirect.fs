@@ -594,7 +594,7 @@ void evaluateIBL(const MaterialInputs material, const PixelParams pixel, inout v
 
     SSAOInterpolationCache interpolationCache;
 #if defined(BLEND_MODE_OPAQUE) || defined(BLEND_MODE_MASKED)
-    interpolationCache.uv = uvToRenderTargetUV(getNormalizedViewportCoord().xy);
+    interpolationCache.uv = uvToRenderTargetUV(getNormalizedViewportCoord().xy * frameUniforms.uvscaleAo);
 #endif
 
     float ssao = evaluateSSAO(interpolationCache);

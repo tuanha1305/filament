@@ -263,6 +263,8 @@ void initScreenSpaceRay(out ScreenSpaceRay ray, highp vec3 wsRayStart, vec3 wsRa
     // convert all to uv (texture) space (z is inverted: [1,0])
     highp vec3 uvRayEnd = vec3(ray.ssRayEnd.xy * 0.5 + 0.5, ray.ssRayEnd.z);
     ray.uvRayStart = vec3(ray.ssRayStart.xy * 0.5 + 0.5, ray.ssRayStart.z);
+    uvRayEnd.xy       *= frameUniforms.uvscaleStructure;
+    ray.uvRayStart.xy *= frameUniforms.uvscaleStructure;
     ray.uvRay = uvRayEnd - ray.uvRayStart;
 }
 
