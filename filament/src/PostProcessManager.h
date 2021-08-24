@@ -103,8 +103,8 @@ public:
 
     // Anti-aliasing
     FrameGraphId<FrameGraphTexture> fxaa(FrameGraph& fg,
-            FrameGraphId<FrameGraphTexture> input, backend::TextureFormat outFormat,
-            bool translucent) noexcept;
+            FrameGraphId<FrameGraphTexture> input, uint32_t contentWidth, uint32_t contentHeight,
+            backend::TextureFormat outFormat, bool translucent) noexcept;
 
     // Temporal Anti-aliasing
     void prepareTaa(FrameHistory& frameHistory, CameraInfo const& cameraInfo,

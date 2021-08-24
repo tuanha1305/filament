@@ -539,8 +539,8 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
             }
         }
         if (hasFXAA) {
-            input = ppm.fxaa(fg, input, colorGradingConfig.ldrFormat,
-                    !hasColorGrading || needsAlphaChannel);
+            input = ppm.fxaa(fg, input, svp.width, svp.height,
+                    colorGradingConfig.ldrFormat, !hasColorGrading || needsAlphaChannel);
         }
         if (scaled) {
             mightNeedFinalBlit = false;

@@ -2044,7 +2044,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::colorGrading(FrameGraph& fg,
 }
 
 FrameGraphId<FrameGraphTexture> PostProcessManager::fxaa(FrameGraph& fg,
-        FrameGraphId<FrameGraphTexture> input,
+        FrameGraphId<FrameGraphTexture> input, uint32_t contentWidth, uint32_t contentHeight,
         TextureFormat outFormat, bool translucent) noexcept {
 
     struct PostProcessFXAA {
@@ -2061,11 +2061,13 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::fxaa(FrameGraph& fg,
                         .height = inputDesc.height,
                         .format = outFormat
                 });
-                data.output = builder.declareRenderPass(data.output);
+                data.output = builder.declareRenderPass(data.output,
+                        { 0, 0, contentWidth, contentHeight });
             },
             [=](FrameGraphResources const& resources,
-                auto const& data, DriverApi& driver) {
+                    auto const& data, DriverApi& driver) {
                 auto const& texture = resources.getTexture(data.input);
+                auto const& desc = resources.getDescriptor(data.input);
                 auto const& out = resources.getRenderPassInfo();
 
                 auto const& material = getPostProcessMaterial("fxaa");
@@ -2073,6 +2075,9 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::fxaa(FrameGraph& fg,
                 mi->setParameter("colorBuffer", texture, {
                         .filterMag = SamplerMagFilter::LINEAR,
                         .filterMin = SamplerMinFilter::LINEAR
+                });
+                mi->setParameter("uvscale", float2{
+                        float(contentWidth) / desc.width, float(contentHeight) / desc.height
                 });
 
                 const uint8_t variant = uint8_t(translucent ?
